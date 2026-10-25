@@ -42,47 +42,51 @@ public static class SniFragmenter
     /// </summary>
     public static string? ExtractSni(ReadOnlySpan<byte> data)
     {
+        var (_, _, host) = ExtractSniRange(data);
+        return host;
+    }
+
+    /// <summary>
+    /// Returns the byte offset and length of the SNI hostname within the payload,
+    /// plus the hostname. Returns (-1,-1,null) if not found.
+    /// </summary>
+    public static (int offset, int length, string? host) ExtractSniRange(ReadOnlySpan<byte> data)
+    {
         try
         {
-            // Skip record header (5) + handshake header (4) + client version (2) + random (32)
             int pos = 5 + 4 + 2 + 32;
-            if (pos >= data.Length) return null;
-            // session id
+            if (pos >= data.Length) return (-1, -1, null);
             int sidLen = data[pos++];
             pos += sidLen;
-            // cipher suites
-            if (pos + 2 > data.Length) return null;
+            if (pos + 2 > data.Length) return (-1, -1, null);
             int csLen = (data[pos] << 8) | data[pos + 1]; pos += 2 + csLen;
-            // compression methods
-            if (pos >= data.Length) return null;
+            if (pos >= data.Length) return (-1, -1, null);
             int cmLen = data[pos++];
             pos += cmLen;
-            // extensions
-            if (pos + 2 > data.Length) return null;
+            if (pos + 2 > data.Length) return (-1, -1, null);
             int extLen = (data[pos] << 8) | data[pos + 1]; pos += 2;
             int extEnd = pos + extLen;
             while (pos + 4 <= extEnd && pos + 4 <= data.Length)
             {
                 int extType = (data[pos] << 8) | data[pos + 1]; pos += 2;
                 int eLen = (data[pos] << 8) | data[pos + 1]; pos += 2;
-                if (extType == 0x0000) // server_name
+                if (extType == 0x0000)
                 {
-                    // list length
-                    if (pos + 2 > data.Length) return null;
-                    pos += 2; // skip list length
-                    if (pos + 3 > data.Length) return null;
-                    // name type (0 = host_name)
-                    if (data[pos] != 0) return null;
+                    if (pos + 2 > data.Length) return (-1, -1, null);
+                    pos += 2;
+                    if (pos + 3 > data.Length) return (-1, -1, null);
+                    if (data[pos] != 0) return (-1, -1, null);
                     pos++;
                     int nameLen = (data[pos] << 8) | data[pos + 1]; pos += 2;
-                    if (pos + nameLen > data.Length) return null;
-                    return Encoding.ASCII.GetString(data.Slice(pos, nameLen));
+                    if (pos + nameLen > data.Length) return (-1, -1, null);
+                    var host = Encoding.ASCII.GetString(data.Slice(pos, nameLen));
+                    return (pos, nameLen, host);
                 }
                 pos += eLen;
             }
         }
         catch { /* ignore */ }
-        return null;
+        return (-1, -1, null);
     }
 
     public static bool IsRobloxDomain(string? host, string[] domains)

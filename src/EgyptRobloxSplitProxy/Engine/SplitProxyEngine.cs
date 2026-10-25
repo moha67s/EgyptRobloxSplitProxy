@@ -41,7 +41,7 @@ public sealed class SplitProxyEngine : IDisposable
                 Logger.Info("Roblox detected -> activating transparent redirect.");
                 if (WinDivertInterop.IsAvailable() && !_divert.IsRunning)
                 {
-                    var filter = "tcp.DstPort == 443 and ip.DstAddr != 127.0.0.1";
+                    var filter = "outbound and tcp.DstPort == 443 and ip.DstAddr != 127.0.0.1";
                     if (_divert.Start(filter))
                         Logger.Info("WinDivert session started for Roblox.");
                     else
@@ -63,6 +63,7 @@ public sealed class SplitProxyEngine : IDisposable
         if (IsRunning) return;
         try
         {
+            _divert.RobloxDomains = _cfg.RobloxDomains;
             FirewallManager.AllowPort(_cfg.HttpsProxyPort, "EgyptRobloxSplitProxy-HTTPS");
             FirewallManager.AllowPort(_cfg.UdpRelayPort, "EgyptRobloxSplitProxy-UDP");
 
