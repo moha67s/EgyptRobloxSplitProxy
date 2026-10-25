@@ -37,10 +37,15 @@ other games are untouched.
 
 ## Quick start
 
-1. Download `EgyptRobloxSplitProxy.exe` from Releases.
-2. Run as Administrator (required for firewall rules / optional WinDivert).
-3. Right-click tray icon -> **Start**.
-4. Launch Roblox.
+1. Download `EgyptRobloxSplitProxy.exe` from Releases (or build from source).
+2. Run `scripts/setup.ps1` as Administrator to install the WinDivert driver + firewall rules.
+3. Launch `EgyptRobloxSplitProxy.exe` as Administrator.
+4. Right-click tray icon -> **Start** (auto-starts by default).
+5. Launch Roblox.
+
+For a transparent (no system-proxy) experience, WinDivert must be installed
+(see step 2). Without it the app runs in proxy-only mode and Roblox will not
+be redirected automatically.
 
 ## Build from source
 

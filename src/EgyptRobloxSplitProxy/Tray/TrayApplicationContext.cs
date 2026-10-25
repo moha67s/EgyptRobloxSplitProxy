@@ -32,6 +32,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         menu.Items.Add(_statusItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_toggleItem);
+        menu.Items.Add("Verify setup", null, (_, _) => VerifySetup());
         menu.Items.Add("Open Log", null, (_, _) => OpenLog());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, (_, _) => Exit());
@@ -49,6 +50,17 @@ public sealed class TrayApplicationContext : ApplicationContext
         {
             // auto-start
             try { _engine.Start(); _toggleItem.Text = "Stop"; _statusItem.Text = "Status: Running"; }
+            catch { }
+        }
+
+        if (!_engine.WinDivertAvailable)
+        {
+            try
+            {
+                _tray.ShowBalloonTip(5000, "EgyptRobloxSplitProxy",
+                    "WinDivert not found - running in proxy-only mode. Roblox will not be redirected automatically. Run scripts/setup.ps1 as Administrator.",
+                    ToolTipIcon.Warning);
+            }
             catch { }
         }
     }
@@ -73,6 +85,38 @@ public sealed class TrayApplicationContext : ApplicationContext
             Logger.Error(ex);
             MessageBox.Show(ex.Message, "EgyptRobloxSplitProxy", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void VerifySetup()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("WinDivert driver: " + (_engine.WinDivertAvailable ? "OK (transparent mode available)" : "MISSING (proxy-only mode)"));
+        sb.AppendLine("Running as admin: " + IsAdmin());
+        sb.AppendLine("Proxy port 8080: " + PortListening(8080));
+        sb.AppendLine("Config: " + (_engine.Config.RelayEndpoint == "" ? "no UDP relay endpoint set" : _engine.Config.RelayEndpoint));
+        MessageBox.Show(sb.ToString(), "EgyptRobloxSplitProxy - Setup Check", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private static bool IsAdmin()
+    {
+        try
+        {
+            var id = System.Security.Principal.WindowsIdentity.GetCurrent();
+            var pr = new System.Security.Principal.WindowsPrincipal(id);
+            return pr.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+        catch { return false; }
+    }
+
+    private static bool PortListening(int port)
+    {
+        try
+        {
+            using var c = new System.Net.Sockets.TcpClient();
+            c.Connect("127.0.0.1", port);
+            return true;
+        }
+        catch { return false; }
     }
 
     private static void OpenLog()

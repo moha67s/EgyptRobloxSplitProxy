@@ -21,6 +21,7 @@ public sealed class SplitProxyEngine : IDisposable
     private readonly WinDivertSession _divert;
 
     public bool IsRunning { get; private set; }
+    public bool WinDivertAvailable => WinDivertInterop.IsAvailable();
 
     public event Action<string>? StatusChanged;
 
