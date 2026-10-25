@@ -1,0 +1,21 @@
+# Build outputs
+bin/
+obj/
+publish/
+*.exe
+*.pdb
+*.dll
+*.sys
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
