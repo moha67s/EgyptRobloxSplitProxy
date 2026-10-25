@@ -66,6 +66,7 @@ public sealed class WinDivertSession : IDisposable
     private IntPtr _handle = IntPtr.Zero;
     private Thread? _thread;
     private volatile bool _running;
+    public bool IsRunning => _running;
 
     public event Action<IntPtr, uint, IntPtr>? PacketReceived;
 
@@ -90,7 +91,10 @@ public sealed class WinDivertSession : IDisposable
             {
                 if (WinDivertInterop.WinDivertRecv(_handle, buf, 65535, out var read, addr))
                 {
+                    // Default: reinject unmodified so we never black-hole traffic.
+                    // Subscribers may inspect/modify via PacketReceived before reinjection.
                     PacketReceived?.Invoke(buf, read, addr);
+                    WinDivertInterop.WinDivertSend(_handle, buf, read, out _, addr);
                 }
             }
         }

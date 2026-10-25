@@ -38,13 +38,22 @@ public sealed class SplitProxyEngine : IDisposable
         {
             if (_cfg.AutoHookRoblox && IsRunning)
             {
-                Logger.Info("Roblox detected -> ensuring routes active.");
+                Logger.Info("Roblox detected -> activating transparent redirect.");
+                if (WinDivertInterop.IsAvailable() && !_divert.IsRunning)
+                {
+                    var filter = "tcp.DstPort == 443 and ip.DstAddr != 127.0.0.1";
+                    if (_divert.Start(filter))
+                        Logger.Info("WinDivert session started for Roblox.");
+                    else
+                        Logger.Warn("WinDivert session failed to start.");
+                }
                 StatusChanged?.Invoke("Roblox detected - tunnel active");
             }
         };
         _processMonitor.RobloxStopped += () =>
         {
-            Logger.Info("Roblox exited.");
+            Logger.Info("Roblox exited -> deactivating transparent redirect.");
+            _divert.Stop();
             StatusChanged?.Invoke("Roblox exited - idle");
         };
     }
@@ -61,14 +70,9 @@ public sealed class SplitProxyEngine : IDisposable
             _udpRelay.Start();
             _processMonitor.Start();
 
-            // Optional kernel-level redirect (requires WinDivert driver).
             if (WinDivertInterop.IsAvailable())
             {
-                var filter = "tcp.DstPort == 443 and ip.DstAddr != 127.0.0.1";
-                if (_divert.Start(filter))
-                    Logger.Info("WinDivert session started.");
-                else
-                    Logger.Warn("WinDivert session failed to start; running in proxy-only mode.");
+                Logger.Info("WinDivert available - transparent mode enabled (activated when Roblox runs).");
             }
             else
             {
